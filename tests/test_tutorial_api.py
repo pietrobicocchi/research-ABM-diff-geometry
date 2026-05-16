@@ -17,7 +17,7 @@ def test_one_step_exported():
     cfg = _default_cfg()
     key = make_key(0)
     state = init_world(key, cfg)
-    k1, k2 = jax.random.split(key)
+    k1, _ = jax.random.split(key)
     next_state = one_step(state, k1, cfg)
     assert next_state.soft_occupancy.shape == (10, 10, 3)
     assert int(next_state.step) == 1
@@ -48,6 +48,6 @@ def test_tolerance_sweep_shapes():
     state = init_world(key, cfg)
     _sim = jax.jit(simulate, static_argnums=(2,))
     for tau_val in [0.2, 0.4, 0.6]:
-        s_tau = state.replace(tolerances=jnp.full((10, 10), tau_val))
+        s_tau = state.replace(tolerances=jnp.full((cfg.H, cfg.W), tau_val))
         final = _sim(key, s_tau, cfg)
         assert final.soft_occupancy.shape == (10, 10, 3)
