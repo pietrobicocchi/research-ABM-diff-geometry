@@ -65,3 +65,41 @@ def test_neighbour_fraction_all_same_type():
     frac = neighbour_type_fraction(occ)
     assert jnp.allclose(frac[..., 0], jnp.ones((5, 5)), atol=1e-5)
     assert jnp.allclose(frac[..., 1], jnp.zeros((5, 5)), atol=1e-5)
+
+
+from src.abm_geometry.schelling.satisfaction import soft_satisfaction
+
+
+def test_satisfaction_shape():
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    sat = soft_satisfaction(state.soft_occupancy, state.tolerances, CFG.beta)
+    assert sat.shape == (10, 10)
+
+
+def test_satisfaction_range():
+    """Satisfaction values should be in (0, 1) since they are sigmoid outputs."""
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    sat = soft_satisfaction(state.soft_occupancy, state.tolerances, CFG.beta)
+    assert jnp.all(sat >= 0.0) and jnp.all(sat <= 1.0)
+
+
+def test_satisfaction_zero_tolerance():
+    """With τ=0, every agent is satisfied (any non-zero similar fraction ≥ 0)."""
+    key = jax.random.PRNGKey(1)
+    state = init_world(key, CFG)
+    # Replace tolerances with 0
+    state_zero_tau = state.replace(tolerances=jnp.zeros((10, 10)))
+    sat = soft_satisfaction(state_zero_tau.soft_occupancy, state_zero_tau.tolerances, beta=10.0)
+    # Most cells should be highly satisfied; none should be < 0.5 at high beta
+    assert jnp.mean(sat) > 0.6
+
+
+def test_satisfaction_high_tolerance():
+    """With τ=1, no agent is ever fully satisfied."""
+    key = jax.random.PRNGKey(1)
+    state = init_world(key, CFG)
+    state_high_tau = state.replace(tolerances=jnp.ones((10, 10)))
+    sat = soft_satisfaction(state_high_tau.soft_occupancy, state_high_tau.tolerances, beta=10.0)
+    assert jnp.mean(sat) < 0.4
