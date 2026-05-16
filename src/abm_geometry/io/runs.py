@@ -1,21 +1,16 @@
 import dataclasses
 import datetime
 import json
-import subprocess
 from pathlib import Path
 
 import numpy as np
 
+from abm_geometry.rng import get_git_sha
+
 
 def make_run_id() -> str:
     ts = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    try:
-        sha = subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], text=True
-        ).strip()
-    except Exception:
-        sha = "nogit"
-    return f"{ts}-{sha}"
+    return f"{ts}-{get_git_sha()}"
 
 
 def save_results(

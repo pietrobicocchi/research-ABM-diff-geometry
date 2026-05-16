@@ -85,9 +85,12 @@ def main():
     print("\n--- Milestone 0 verification ---")
     # 1. jit (already ran above without error)
     print("[1] jit: PASS")
-    # 2. vmap — use plain simulate (not sim_jit) inside vmap; cfg is a closure constant
+    # 2. vmap — split k so init_world and simulate use independent entropy
     keys = jax.random.split(key, 4)
-    batch = jax.jit(jax.vmap(lambda k: simulate(k, init_world(k, cfg), cfg)))(keys)
+    def run_one(k):
+        k_init, k_sim = jax.random.split(k)
+        return simulate(k_sim, init_world(k_init, cfg), cfg)
+    batch = jax.jit(jax.vmap(run_one))(keys)
     assert batch.soft_occupancy.shape == (4, cfg.H, cfg.W, 3)
     print("[2] vmap: PASS")
     # 3. differentiability
