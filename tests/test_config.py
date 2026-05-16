@@ -1,5 +1,5 @@
 from pathlib import Path
-from src.abm_geometry.config import Config, load_config
+from abm_geometry.config import Config, load_config
 
 
 def test_config_defaults():

@@ -1,5 +1,5 @@
-from src.abm_geometry.statistics.segregation import dissimilarity_index
-from src.abm_geometry.types import SummaryStats, WorldState
+from abm_geometry.statistics.segregation import dissimilarity_index
+from abm_geometry.types import SummaryStats, WorldState
 
 
 def stats_fn(state: WorldState) -> SummaryStats:

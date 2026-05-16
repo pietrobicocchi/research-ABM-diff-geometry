@@ -1,9 +1,8 @@
 import jax.numpy as jnp
-import pytest
 
-from src.abm_geometry.statistics.segregation import dissimilarity_index
-from src.abm_geometry.statistics.summary import stats_fn
-from src.abm_geometry.types import WorldState
+from abm_geometry.statistics.segregation import dissimilarity_index
+from abm_geometry.statistics.summary import stats_fn
+from abm_geometry.types import WorldState
 
 
 def test_dissimilarity_fully_segregated():
@@ -33,12 +32,12 @@ def test_dissimilarity_range():
 
 
 def test_stats_fn_returns_summary_stats():
-    from src.abm_geometry.types import SummaryStats
+    from abm_geometry.types import SummaryStats
     import jax
 
     key = jax.random.PRNGKey(0)
-    from src.abm_geometry.config import Config
-    from src.abm_geometry.schelling.state import init_world
+    from abm_geometry.config import Config
+    from abm_geometry.schelling.state import init_world
 
     cfg = Config(H=5, W=5, T=3)
     state = init_world(key, cfg)

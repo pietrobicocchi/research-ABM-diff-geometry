@@ -2,8 +2,8 @@ import jax
 import jax.numpy as jnp
 import pytest
 
-from src.abm_geometry.config import Config
-from src.abm_geometry.schelling.state import init_world
+from abm_geometry.config import Config
+from abm_geometry.schelling.state import init_world
 
 CFG = Config(H=10, W=10, T=5, density=0.8, group_ratio=0.5, tau=0.4)
 
@@ -39,7 +39,7 @@ def test_init_world_step_zero():
     assert int(state.step) == 0
 
 
-from src.abm_geometry.schelling.neighbours import neighbour_type_fraction
+from abm_geometry.schelling.neighbours import neighbour_type_fraction
 
 
 def test_neighbour_fraction_shape():
@@ -67,7 +67,7 @@ def test_neighbour_fraction_all_same_type():
     assert jnp.allclose(frac[..., 1], jnp.zeros((5, 5)), atol=1e-5)
 
 
-from src.abm_geometry.schelling.satisfaction import soft_satisfaction
+from abm_geometry.schelling.satisfaction import soft_satisfaction
 
 
 def test_satisfaction_shape():
@@ -105,7 +105,7 @@ def test_satisfaction_high_tolerance():
     assert jnp.mean(sat) < 0.4
 
 
-from src.abm_geometry.schelling.move_rules import gumbel_softmax_step
+from abm_geometry.schelling.move_rules import gumbel_softmax_step
 
 
 def test_move_rule_output_shape():
@@ -148,7 +148,7 @@ def test_move_rule_non_negative():
     assert jnp.all(new_occ >= -1e-6)
 
 
-from src.abm_geometry.schelling.simulate import simulate
+from abm_geometry.schelling.simulate import simulate
 
 
 def test_simulate_output_shape():
