@@ -37,3 +37,31 @@ def test_init_world_step_zero():
     key = jax.random.PRNGKey(0)
     state = init_world(key, CFG)
     assert int(state.step) == 0
+
+
+from src.abm_geometry.schelling.neighbours import neighbour_type_fraction
+
+
+def test_neighbour_fraction_shape():
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    frac = neighbour_type_fraction(state.soft_occupancy)
+    assert frac.shape == (10, 10, 2)
+
+
+def test_neighbour_fraction_sums_to_one():
+    """frac_A + frac_B should sum to 1 everywhere (by definition of fraction)."""
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    frac = neighbour_type_fraction(state.soft_occupancy)
+    total = frac[..., 0] + frac[..., 1]
+    assert jnp.allclose(total, jnp.ones((10, 10)), atol=1e-5)
+
+
+def test_neighbour_fraction_all_same_type():
+    """Grid entirely filled with type A → frac_A = 1 everywhere."""
+    # All type A, no empty
+    occ = jnp.zeros((5, 5, 3)).at[..., 1].set(1.0)  # all A
+    frac = neighbour_type_fraction(occ)
+    assert jnp.allclose(frac[..., 0], jnp.ones((5, 5)), atol=1e-5)
+    assert jnp.allclose(frac[..., 1], jnp.zeros((5, 5)), atol=1e-5)
