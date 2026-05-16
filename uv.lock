@@ -41,7 +41,7 @@ dependencies = [
     { name = "seaborn" },
 ]
 
-[package.optional-dependencies]
+[package.dev-dependencies]
 dev = [
     { name = "ipykernel" },
     { name = "jupyter" },
@@ -49,30 +49,25 @@ dev = [
     { name = "pytest" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "pytest" },
-]
-
 [package.metadata]
 requires-dist = [
     { name = "chex", specifier = ">=0.1.86" },
-    { name = "ipykernel", marker = "extra == 'dev'", specifier = ">=6.0" },
     { name = "jax", extras = ["cpu"], specifier = ">=0.4.25" },
     { name = "jaxtyping", specifier = ">=0.2.28" },
-    { name = "jupyter", marker = "extra == 'dev'", specifier = ">=1.0" },
     { name = "matplotlib", specifier = ">=3.8" },
     { name = "numpy", specifier = ">=1.26" },
     { name = "omegaconf", specifier = ">=2.3" },
     { name = "optax", specifier = ">=0.2.2" },
-    { name = "pyright", marker = "extra == 'dev'", specifier = ">=1.1" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "seaborn", specifier = ">=0.13" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.0.3" }]
+dev = [
+    { name = "ipykernel", specifier = ">=6.0" },
+    { name = "jupyter", specifier = ">=1.0" },
+    { name = "pyright", specifier = ">=1.1" },
+    { name = "pytest", specifier = ">=9.0.3" },
+]
 
 [[package]]
 name = "absl-py"
