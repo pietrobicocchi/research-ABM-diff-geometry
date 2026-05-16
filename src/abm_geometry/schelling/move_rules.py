@@ -39,23 +39,22 @@ def gumbel_softmax_step(
 
     occupied = soft_occ[..., 1:]  # Float[H, W, 2]; axis-2 = [A, B]
     empty = soft_occ[..., 0]  # Float[H, W]
-    total_empty = jnp.sum(empty) + 1e-8  # scalar
 
     # Scale down move probability so total moving mass ≤ total empty capacity.
     # This ensures the redistribution never overfills any cell and new_empty ≥ 0.
     p_move = 1.0 - p_stay
     total_moving_uncapped = jnp.sum(occupied * p_move[..., None])
-    cap_scale = jnp.minimum(total_empty / (total_moving_uncapped + 1e-8), 1.0)
+    cap_scale = jnp.minimum(jnp.sum(empty) / (total_moving_uncapped + 1e-8), 1.0)
     p_move_eff = p_move * cap_scale
-    p_stay_eff = 1.0 - p_move_eff
 
     # Split occupied mass into staying and moving components
-    staying = occupied * p_stay_eff[..., None]  # Float[H, W, 2]
+    staying = occupied * (1.0 - p_move_eff)[..., None]  # Float[H, W, 2]
     moving = occupied * p_move_eff[..., None]  # Float[H, W, 2]
 
-    # Redistribute moving mass to cells proportional to their emptiness
+    # Redistribute moving mass to cells proportional to their emptiness.
+    # Use jnp.maximum so sum(empty_weight) is exactly 1 when empty space exists.
     total_moving = jnp.sum(moving, axis=(0, 1))  # Float[2]
-    empty_weight = empty / total_empty  # Float[H, W]; normalized so sum = 1
+    empty_weight = empty / jnp.maximum(jnp.sum(empty), 1e-8)  # Float[H, W]; sum = 1
 
     new_A = staying[..., 0] + total_moving[0] * empty_weight
     new_B = staying[..., 1] + total_moving[1] * empty_weight
