@@ -1,7 +1,6 @@
 from typing import NamedTuple
 
 import chex
-import jax.numpy as jnp
 from jax import Array
 from jaxtyping import Float, Int
 
