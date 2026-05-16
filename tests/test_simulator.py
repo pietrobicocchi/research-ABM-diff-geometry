@@ -146,3 +146,51 @@ def test_move_rule_non_negative():
         state.soft_occupancy, state.tolerances, key, CFG.beta, CFG.tau_g
     )
     assert jnp.all(new_occ >= -1e-6)
+
+
+from src.abm_geometry.schelling.simulate import simulate
+
+
+def test_simulate_output_shape():
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    final = simulate(key, state, CFG)
+    assert final.soft_occupancy.shape == (10, 10, 3)
+
+
+def test_simulate_step_counter():
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    final = simulate(key, state, CFG)
+    assert int(final.step) == CFG.T
+
+
+def test_simulate_mass_conservation():
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    final = simulate(key, state, CFG)
+    sums = jnp.sum(final.soft_occupancy, axis=-1)
+    assert jnp.allclose(sums, jnp.ones((10, 10)), atol=1e-4)
+
+
+def test_simulate_jit():
+    """Running jitted simulate twice with same inputs should give identical results."""
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    sim_jit = jax.jit(simulate, static_argnums=(2,))
+    out1 = sim_jit(key, state, CFG)
+    out2 = sim_jit(key, state, CFG)
+    assert jnp.allclose(out1.soft_occupancy, out2.soft_occupancy)
+
+
+def test_simulate_vmap():
+    """vmap over keys should produce a batch of independent simulations."""
+    B = 4
+    keys = jax.random.split(jax.random.PRNGKey(99), B)
+
+    def run_one(key):
+        state = init_world(key, CFG)
+        return simulate(key, state, CFG)
+
+    batch = jax.jit(jax.vmap(run_one))(keys)
+    assert batch.soft_occupancy.shape == (B, 10, 10, 3)
