@@ -1,0 +1,9 @@
+outputs/
+!outputs/.gitkeep
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.egg-info/
+dist/
+.pyright/

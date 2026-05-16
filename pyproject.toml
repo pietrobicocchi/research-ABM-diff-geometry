@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "abm-geometry"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "jax>=0.4.1",
+    "jaxlib>=0.4.1",
+    "chex>=0.1.7",
+    "jaxtyping>=0.2.0",
+    "optax>=0.1.5",
+    "matplotlib>=3.5",
+    "seaborn>=0.12",
+    "omegaconf>=2.3",
+    "numpy>=1.23",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pyright>=1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v"
+
+[tool.uv]
+required-environments = [
+    "sys_platform == 'darwin' and platform_machine == 'x86_64'",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/abm_geometry"]
