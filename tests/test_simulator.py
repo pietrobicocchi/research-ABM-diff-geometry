@@ -188,9 +188,9 @@ def test_simulate_vmap():
     B = 4
     keys = jax.random.split(jax.random.PRNGKey(99), B)
 
-    def run_one(key):
-        state = init_world(key, CFG)
-        return simulate(key, state, CFG)
+    def run_one(k):
+        k_init, k_sim = jax.random.split(k)
+        return simulate(k_sim, init_world(k_init, CFG), CFG)
 
     batch = jax.jit(jax.vmap(run_one))(keys)
     assert batch.soft_occupancy.shape == (B, 10, 10, 3)

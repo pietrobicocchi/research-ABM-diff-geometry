@@ -33,7 +33,12 @@ def test_gradient_is_finite():
 
 
 def test_jacfwd_matches_finite_difference():
-    """jacfwd gradient should agree with central finite difference to 1e-2."""
+    """jacfwd gradient should agree with central finite difference.
+
+    atol=1e-2: Gumbel noise in the move rule makes the landscape slightly rough
+    at finite step count (T=10), so 1e-4 is too tight for a small test grid.
+    Phase I uses larger grids and more steps where the landscape is smoother.
+    """
     tau = jnp.array(0.4)
     eps = 1e-3
 
