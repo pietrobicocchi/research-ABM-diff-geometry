@@ -103,3 +103,46 @@ def test_satisfaction_high_tolerance():
     state_high_tau = state.replace(tolerances=jnp.ones((10, 10)))
     sat = soft_satisfaction(state_high_tau.soft_occupancy, state_high_tau.tolerances, beta=10.0)
     assert jnp.mean(sat) < 0.4
+
+
+from src.abm_geometry.schelling.move_rules import gumbel_softmax_step
+
+
+def test_move_rule_output_shape():
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    new_occ = gumbel_softmax_step(
+        state.soft_occupancy, state.tolerances, key, CFG.beta, CFG.tau_g
+    )
+    assert new_occ.shape == (10, 10, 3)
+
+
+def test_move_rule_sums_to_one():
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    new_occ = gumbel_softmax_step(
+        state.soft_occupancy, state.tolerances, key, CFG.beta, CFG.tau_g
+    )
+    sums = jnp.sum(new_occ, axis=-1)
+    assert jnp.allclose(sums, jnp.ones((10, 10)), atol=1e-5)
+
+
+def test_move_rule_total_agent_mass_conserved():
+    """Total mass of type A + type B should be conserved across a step."""
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    total_before = jnp.sum(state.soft_occupancy[..., 1:])
+    new_occ = gumbel_softmax_step(
+        state.soft_occupancy, state.tolerances, key, CFG.beta, CFG.tau_g
+    )
+    total_after = jnp.sum(new_occ[..., 1:])
+    assert jnp.allclose(total_before, total_after, atol=1e-4)
+
+
+def test_move_rule_non_negative():
+    key = jax.random.PRNGKey(0)
+    state = init_world(key, CFG)
+    new_occ = gumbel_softmax_step(
+        state.soft_occupancy, state.tolerances, key, CFG.beta, CFG.tau_g
+    )
+    assert jnp.all(new_occ >= -1e-6)
