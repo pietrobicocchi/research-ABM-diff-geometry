@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from jax import Array
 from jaxtyping import Float, PRNGKeyArray
 
-from abm_geometry.schelling.satisfaction import soft_satisfaction
+from abm_geometry.schelling.satisfaction import type_satisfaction
 
 
 def gumbel_softmax_step(
@@ -15,50 +15,59 @@ def gumbel_softmax_step(
 ) -> Float[Array, "H W 3"]:
     """One differentiable Schelling step via Gumbel-softmax.
 
-    Each occupied cell independently decides whether to stay or move.
-    Moving mass redistributes to cells weighted by their empty probability.
-    This is a relaxed (soft) approximation of the discrete Schelling move rule.
+    Each type makes an *independent* stay/move decision driven by its own
+    satisfaction (frac_same_neighbours ≥ τ), with independent Gumbel noise.
+    This replicates the core Schelling mechanism: type A moves away from
+    B-dominated cells, type B moves away from A-dominated cells, so clusters
+    self-reinforce.  Moving mass of both types redistributes proportionally to
+    the current empty space (uniform over empty cells), preserving the per-cell
+    simplex constraint exactly.
 
     tau_g controls relaxation sharpness: smaller → harder (closer to discrete).
-
-    The move probability is capped so that total moving mass never exceeds total
-    empty capacity, ensuring the simplex constraint (A + B + empty = 1, all ≥ 0)
-    holds exactly without renormalization.
     """
     H, W, _ = soft_occ.shape
 
-    sat = soft_satisfaction(soft_occ, tolerances, beta)  # Float[H, W]
+    sat_A, sat_B = type_satisfaction(soft_occ, tolerances, beta)
 
-    # Stay/move logits and Gumbel noise
-    logits = jnp.stack(
-        [beta * sat, beta * (1.0 - sat)], axis=-1
-    )  # Float[H, W, 2]; axis-2 = [stay, move]
-    u = jax.random.uniform(key, (H, W, 2), minval=1e-6, maxval=1.0)
-    gumbel = -jnp.log(-jnp.log(u))  # Gumbel(0,1) samples
-    p_stay = jax.nn.softmax((logits + gumbel) / tau_g, axis=-1)[..., 0]  # Float[H, W]
+    # Independent Gumbel-softmax stay/move for each type
+    key_A, key_B = jax.random.split(key)
 
-    occupied = soft_occ[..., 1:]  # Float[H, W, 2]; axis-2 = [A, B]
-    empty = soft_occ[..., 0]  # Float[H, W]
+    logits_A = jnp.stack([beta * sat_A, beta * (1.0 - sat_A)], axis=-1)
+    u_A = jax.random.uniform(key_A, (H, W, 2), minval=1e-6, maxval=1.0)
+    gumbel_A = -jnp.log(-jnp.log(u_A))
+    p_move_A = 1.0 - jax.nn.softmax((logits_A + gumbel_A) / tau_g, axis=-1)[..., 0]
 
-    # Scale down move probability so total moving mass ≤ total empty capacity.
-    # This ensures the redistribution never overfills any cell and new_empty ≥ 0.
-    p_move = 1.0 - p_stay
-    total_moving_uncapped = jnp.sum(occupied * p_move[..., None])
+    logits_B = jnp.stack([beta * sat_B, beta * (1.0 - sat_B)], axis=-1)
+    u_B = jax.random.uniform(key_B, (H, W, 2), minval=1e-6, maxval=1.0)
+    gumbel_B = -jnp.log(-jnp.log(u_B))
+    p_move_B = 1.0 - jax.nn.softmax((logits_B + gumbel_B) / tau_g, axis=-1)[..., 0]
+
+    occ_A = soft_occ[..., 1]
+    occ_B = soft_occ[..., 2]
+    empty = soft_occ[..., 0]
+
+    # Cap total moving mass so it never exceeds total empty capacity.
+    # Gradient flows through jnp.minimum.
+    total_moving_uncapped = jnp.sum(occ_A * p_move_A) + jnp.sum(occ_B * p_move_B)
     cap_scale = jnp.minimum(jnp.sum(empty) / (total_moving_uncapped + 1e-8), 1.0)
-    p_move_eff = p_move * cap_scale
+    p_move_eff_A = p_move_A * cap_scale
+    p_move_eff_B = p_move_B * cap_scale
 
-    # Split occupied mass into staying and moving components
-    staying = occupied * (1.0 - p_move_eff)[..., None]  # Float[H, W, 2]
-    moving = occupied * p_move_eff[..., None]  # Float[H, W, 2]
+    staying_A = occ_A * (1.0 - p_move_eff_A)
+    moving_A = occ_A * p_move_eff_A
+    staying_B = occ_B * (1.0 - p_move_eff_B)
+    moving_B = occ_B * p_move_eff_B
 
-    # Redistribute moving mass to cells proportional to their emptiness.
-    # Use jnp.maximum so sum(empty_weight) is exactly 1 when empty space exists.
-    total_moving = jnp.sum(moving, axis=(0, 1))  # Float[2]
-    empty_weight = empty / jnp.maximum(jnp.sum(empty), 1e-8)  # Float[H, W]; sum = 1
+    total_moving_A = jnp.sum(moving_A)
+    total_moving_B = jnp.sum(moving_B)
 
-    new_A = staying[..., 0] + total_moving[0] * empty_weight
-    new_B = staying[..., 1] + total_moving[1] * empty_weight
-    # new_empty is exact (non-negative by cap_scale construction) — no clip needed
+    # Redistribute moving mass to cells weighted by emptiness (sum = 1).
+    # cap_scale ensures (total_moving_A + total_moving_B) ≤ sum(empty),
+    # so new_empty = 1 - new_A - new_B ≥ 0 exactly.
+    empty_weight = empty / jnp.maximum(jnp.sum(empty), 1e-8)
+
+    new_A = staying_A + total_moving_A * empty_weight
+    new_B = staying_B + total_moving_B * empty_weight
     new_empty = 1.0 - new_A - new_B
 
     return jnp.stack([new_empty, new_A, new_B], axis=-1)
