@@ -72,3 +72,22 @@ def test_stats_fn_returns_summary_stats():
     stats = stats_fn(state)
     assert isinstance(stats, SummaryStats)
     assert stats.dissimilarity.shape == ()
+
+
+def test_homogeneity_all_same_type():
+    """Grid all type A → all neighbours same type → homogeneity = 1.0."""
+    from abm_geometry.statistics.clusters import soft_mean_neighbourhood_homogeneity
+
+    occ = jnp.zeros((4, 4, 3)).at[..., 1].set(1.0)
+    h = soft_mean_neighbourhood_homogeneity(occ)
+    assert jnp.allclose(h, jnp.array(1.0), atol=1e-4)
+
+
+def test_homogeneity_range():
+    """Homogeneity should be in [0, 1]."""
+    import jax
+    from abm_geometry.statistics.clusters import soft_mean_neighbourhood_homogeneity
+
+    occ = jax.random.dirichlet(jax.random.PRNGKey(3), jnp.ones(3), shape=(6, 6))
+    h = float(soft_mean_neighbourhood_homogeneity(occ))
+    assert 0.0 - 1e-4 <= h <= 1.0 + 1e-4
