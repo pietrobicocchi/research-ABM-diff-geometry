@@ -4,9 +4,10 @@ import pytest
 
 from abm_geometry.config import Config
 from abm_geometry.geometry.jacobian import compute_jacobian
-from abm_geometry.schelling.simulate import simulate
+from abm_geometry.schelling.simulate import simulate, simulate_with_beta
 from abm_geometry.schelling.state import init_world
 from abm_geometry.statistics.segregation import dissimilarity_index
+from abm_geometry.statistics.summary import stats_array_fn
 
 CFG = Config(H=8, W=8, T=10, beta=5.0, tau_g=0.3, seed=7)
 
@@ -53,3 +54,19 @@ def test_jacfwd_matches_finite_difference():
     assert jnp.allclose(grad_auto, grad_fd, atol=1e-2), (
         f"autodiff={float(grad_auto):.4f}, finite-diff={float(grad_fd):.4f}"
     )
+
+
+def test_gradient_flows_through_beta():
+    """jacfwd should produce a finite gradient w.r.t. beta."""
+    cfg_b = Config(H=8, W=8, T=5, seed=3)
+    key_b = jax.random.PRNGKey(cfg_b.seed)
+    k_init_b, k_sim_b = jax.random.split(key_b)
+    state_b = init_world(k_init_b, cfg_b)
+    sim_beta = jax.jit(simulate_with_beta, static_argnums=(2,))
+
+    def d_from_beta(beta):
+        final = sim_beta(k_sim_b, state_b, cfg_b, beta)
+        return stats_array_fn(final, beta)[0]   # dissimilarity
+
+    grad = jax.grad(d_from_beta)(jnp.array(5.0))
+    assert jnp.isfinite(grad), f"gradient w.r.t. beta not finite: {grad}"
