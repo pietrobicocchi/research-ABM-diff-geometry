@@ -91,3 +91,27 @@ def test_homogeneity_range():
     occ = jax.random.dirichlet(jax.random.PRNGKey(3), jnp.ones(3), shape=(6, 6))
     h = float(soft_mean_neighbourhood_homogeneity(occ))
     assert 0.0 - 1e-4 <= h <= 1.0 + 1e-4
+
+
+def test_stats_array_fn_shape():
+    from abm_geometry.statistics.summary import stats_array_fn
+    from abm_geometry.config import Config
+    from abm_geometry.schelling.state import init_world
+    import jax
+
+    cfg = Config(H=6, W=6, T=3)
+    state = init_world(jax.random.PRNGKey(0), cfg)
+    arr = stats_array_fn(state, cfg.beta)
+    assert arr.shape == (4,)
+
+
+def test_stats_array_fn_range():
+    from abm_geometry.statistics.summary import stats_array_fn
+    from abm_geometry.config import Config
+    from abm_geometry.schelling.state import init_world
+    import jax
+
+    cfg = Config(H=6, W=6, T=3)
+    state = init_world(jax.random.PRNGKey(0), cfg)
+    arr = stats_array_fn(state, cfg.beta)
+    assert jnp.all(jnp.isfinite(arr))
