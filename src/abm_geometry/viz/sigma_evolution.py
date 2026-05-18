@@ -98,3 +98,43 @@ def plot_sigma_kappa_histograms(
     ax.legend(fontsize=9, ncol=2)
     plt.tight_layout()
     return fig
+
+
+def plot_eigenvalue_evolution_sigma(
+    sigma_values: list,
+    eigenvalue_pairs: list,
+) -> plt.Figure:
+    """Two-panel figure: FIM eigenvalues and condition number vs σ at a fixed point.
+
+    eigenvalue_pairs: list of (λ₁, λ₂) tuples, one per σ value (λ₁ ≥ λ₂).
+    Left panel: both eigenvalues on log scale — shows whether the sloppy
+    direction (λ₂) rises, the stiff direction (λ₁) falls, or both.
+    Right panel: condition number κ = λ₁/λ₂ — the scalar summary.
+    """
+    sigmas = np.array(sigma_values)
+    l1 = np.array([ep[0] for ep in eigenvalue_pairs])
+    l2 = np.array([ep[1] for ep in eigenvalue_pairs])
+    kappa = l1 / (l2 + 1e-12)
+
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+
+    ax = axes[0]
+    ax.semilogy(sigmas, l1, "o-",  color="#2b6cb0", lw=2, ms=7, label="λ₁  (stiff)")
+    ax.semilogy(sigmas, l2, "s--", color="#c05621", lw=2, ms=7, label="λ₂  (sloppy)")
+    ax.set_xlabel("σ")
+    ax.set_ylabel("Eigenvalue")
+    ax.set_title("FIM eigenvalues at (τ=0.4, β=5)\nfixed parameter point")
+    ax.legend(fontsize=10)
+    ax.grid(True, alpha=0.3, which="both")
+
+    ax2 = axes[1]
+    ax2.semilogy(sigmas, kappa, "o-", color="#276749", lw=2, ms=7)
+    ax2.set_xlabel("σ")
+    ax2.set_ylabel("Condition number κ = λ₁/λ₂")
+    ax2.set_title("Identifiability at (τ=0.4, β=5)\nsmaller κ = easier to calibrate")
+    ax2.grid(True, alpha=0.3, which="both")
+
+    plt.suptitle("How heterogeneity reshapes the FIM at a single parameter point",
+                 fontsize=12, y=1.02)
+    plt.tight_layout()
+    return fig
