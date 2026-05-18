@@ -14,6 +14,7 @@ class Config:
     beta: float = 5.0     # inverse temperature for satisfaction sigmoid
     tau_g: float = 0.5    # Gumbel temperature; smaller → harder moves
     tau: float = 0.4      # homogeneous tolerance threshold (Phase I)
+    sigma_tau: float = 0.0  # std of tolerance distribution; 0 = homogeneous
     seed: int = 42
 
 
