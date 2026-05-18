@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 
-from abm_geometry.statistics.segregation import dissimilarity_index
+from abm_geometry.statistics.segregation import dissimilarity_index, moran_i
 from abm_geometry.statistics.summary import stats_fn
 from abm_geometry.types import WorldState
 
@@ -29,6 +29,34 @@ def test_dissimilarity_range():
     occ_raw = jax.random.dirichlet(key, jnp.ones(3), shape=(5, 5))
     d = dissimilarity_index(occ_raw)
     assert 0.0 <= float(d) <= 1.0 + 1e-5
+
+
+def test_moran_i_uniform():
+    """All cells equal A fraction → z=0 everywhere → I=0."""
+    occ = jnp.zeros((4, 4, 3)).at[..., 1].set(0.5).at[..., 2].set(0.5)
+    assert jnp.allclose(moran_i(occ), jnp.array(0.0), atol=1e-5)
+
+
+def test_moran_i_range():
+    """Moran's I should be in [-1, 1] for any valid soft_occ."""
+    import jax
+    key = jax.random.PRNGKey(7)
+    occ = jax.random.dirichlet(key, jnp.ones(3), shape=(8, 8))
+    i = float(moran_i(occ))
+    assert -1.0 - 1e-4 <= i <= 1.0 + 1e-4
+
+
+def test_moran_i_segregated():
+    """Left half all A, right half all B → strong positive autocorrelation.
+
+    Uses an 8×8 grid (not 4×4): on a toroidal 4×4 grid with only 4 columns
+    the periodic wrap makes every boundary cell see 3/8 opposite-type neighbours,
+    analytically giving I=0.25. An 8×8 grid yields I≈0.625.
+    """
+    occ = jnp.zeros((8, 8, 3))
+    occ = occ.at[:, :4, 1].set(1.0)   # left half: type A
+    occ = occ.at[:, 4:, 2].set(1.0)   # right half: type B
+    assert float(moran_i(occ)) > 0.3
 
 
 def test_stats_fn_returns_summary_stats():
