@@ -100,8 +100,7 @@ def simulate_mean_field_with_params(
     """
     def body(state, _):
         tol     = jnp.full((cfg.H, cfg.W), tau)
-        s       = state.replace(tolerances=tol)
-        new_occ = mean_field_step(s.soft_occupancy, s.tolerances, beta, cfg.tau_g)
+        new_occ = mean_field_step(state.soft_occupancy, tol, beta, cfg.tau_g)
         return state.replace(
             soft_occupancy=new_occ, tolerances=tol, step=state.step + 1
         ), None

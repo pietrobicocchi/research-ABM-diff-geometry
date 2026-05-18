@@ -66,6 +66,7 @@ def test_mean_field_gradient_tau():
 
     grad = jax.grad(d_from_tau)(jnp.array(0.4))
     assert jnp.isfinite(grad), f"gradient w.r.t. tau not finite: {grad}"
+    assert jnp.abs(grad) > 1e-4, f"gradient w.r.t. tau suspiciously small: {grad}"
 
 
 def test_mean_field_gradient_beta():
@@ -80,6 +81,7 @@ def test_mean_field_gradient_beta():
 
     grad = jax.grad(d_from_beta)(jnp.array(5.0))
     assert jnp.isfinite(grad), f"gradient w.r.t. beta not finite: {grad}"
+    assert jnp.abs(grad) > 1e-4, f"gradient w.r.t. beta suspiciously small: {grad}"
 
 
 def test_mean_field_fim_shape():
