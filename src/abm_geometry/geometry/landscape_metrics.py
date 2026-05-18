@@ -51,3 +51,54 @@ def boundary_sharpness(
             if p1_hi > p1_lo:
                 widths.append(p1_hi - p1_lo)
     return float(np.mean(widths)) if widths else 0.0
+
+
+def bootstrap_landscape_metrics(
+    kappa_grids: list,
+    n_bootstrap: int = 500,
+    threshold: float = 1000.0,
+    confidence: float = 0.95,
+    seed: int = 0,
+) -> dict:
+    """95% confidence intervals for landscape metrics via spatial bootstrap.
+
+    Resamples grid cells with replacement to estimate metric uncertainty due
+    to the finite parameter grid. Does NOT capture FIM estimation noise (which
+    requires saving raw noise samples from estimate_noise_cov); it captures
+    spatial sampling variability — i.e., how sensitive each metric is to
+    which specific (τ,β) points happen to be included in the grid.
+
+    Covers kappa_max, kappa_median, log_kappa_variance, corridor_area.
+    boundary_sharpness is excluded because it depends on spatial ordering
+    that the cell-resample bootstrap destroys.
+
+    Returns dict: metric_name → (lower_ci, upper_ci), each Float[n_sigma].
+    """
+    alpha = (1.0 - confidence) / 2.0
+    rng   = np.random.default_rng(seed)
+
+    _fns = {
+        "kappa_max":          lambda kg: kappa_max(kg),
+        "kappa_median":       lambda kg: kappa_median(kg),
+        "log_kappa_variance": lambda kg: log_kappa_variance(kg),
+        "corridor_area":      lambda kg: corridor_area(kg, threshold),
+    }
+
+    lowers: dict = {n: [] for n in _fns}
+    uppers: dict = {n: [] for n in _fns}
+
+    for kg in kappa_grids:
+        flat = kg.ravel()
+        n    = len(flat)
+        boot: dict = {k: np.empty(n_bootstrap) for k in _fns}
+
+        for b in range(n_bootstrap):
+            resample = rng.choice(flat, n, replace=True).reshape(kg.shape)
+            for name, fn in _fns.items():
+                boot[name][b] = fn(resample)
+
+        for name in _fns:
+            lowers[name].append(np.percentile(boot[name], 100.0 * alpha))
+            uppers[name].append(np.percentile(boot[name], 100.0 * (1.0 - alpha)))
+
+    return {n: (np.array(lowers[n]), np.array(uppers[n])) for n in _fns}

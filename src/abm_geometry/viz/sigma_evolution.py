@@ -45,11 +45,14 @@ def plot_sigma_landscape_panel(
 def plot_sigma_metric_curves(
     sigma_values: list,
     metrics: dict,
+    ci: dict | None = None,
 ) -> plt.Figure:
     """Four-panel figure: one subplot per metric showing value vs σ.
 
-    metrics: dict with keys matching _METRIC_LABELS (kappa_max,
-    kappa_median, log_kappa_variance, corridor_area, boundary_sharpness).
+    metrics: dict with keys matching _METRIC_LABELS.
+    ci: optional dict from bootstrap_landscape_metrics —
+        metric_name → (lower_95, upper_95) arrays.
+        When provided, draws a shaded 95% confidence band.
     boundary_sharpness shares a panel with corridor_area (right y-axis).
     """
     plot_keys = ["kappa_max", "kappa_median", "log_kappa_variance", "corridor_area"]
@@ -60,6 +63,10 @@ def plot_sigma_metric_curves(
     for ax, key in zip(axes, plot_keys):
         label, prediction = _METRIC_LABELS[key]
         ax.plot(sigmas, metrics[key], "o-", color="#2b6cb0", lw=2, ms=7)
+        if ci is not None and key in ci:
+            lower, upper = ci[key]
+            ax.fill_between(sigmas, lower, upper, alpha=0.20, color="#2b6cb0",
+                            label="95% CI (spatial bootstrap)")
         ax.set_xlabel("σ")
         ax.set_ylabel(label)
         ax.set_title(f"{label}\n{prediction}", fontsize=10)

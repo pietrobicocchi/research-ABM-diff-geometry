@@ -4,8 +4,9 @@ Tests whether population heterogeneity σ acts as a landscape regulariser by
 computing the full stochastic FIM κ(τ,β) landscape for 7 σ values and tracking
 5 landscape metrics.
 
-Paper-quality run: set N_GRID=15, K_NOISE=20 (no other changes needed).
-Runtime at defaults (N_GRID=10, K_NOISE=10): ~45 min on CPU.
+Current settings: paper-quality run (N_GRID=15, K_NOISE=20).
+Estimated runtime: ~3 hours on CPU.
+For a quick exploratory run set N_GRID=10, K_NOISE=10 (~45 min).
 Results saved to outputs/<run_id>/sigma_sweep_results.npz
 """
 import sys
@@ -43,8 +44,8 @@ from abm_geometry.viz.sigma_evolution import (
 )
 
 # ── Configuration (adjust these two lines for the paper-quality run) ──────────
-N_GRID   = 10   # parameter grid size per axis; set to 15 for paper run
-K_NOISE  = 10   # noise-cov samples per grid point; set to 20 for paper run
+N_GRID   = 15   # paper run; use 10 for quick exploratory (~45 min)
+K_NOISE  = 20   # paper run; use 10 for quick exploratory
 
 CFG        = Config(H=30, W=30, T=50, seed=42, tau=0.4, beta=5.0)
 TAU_GRID   = np.linspace(0.1, 0.8, N_GRID)
