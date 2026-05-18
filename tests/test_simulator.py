@@ -3,9 +3,10 @@ import jax.numpy as jnp
 import pytest
 
 from abm_geometry.config import Config
-from abm_geometry.schelling.state import init_world
+from abm_geometry.schelling.state import init_world, init_world_heterogeneous
 
 CFG = Config(H=10, W=10, T=5, density=0.8, group_ratio=0.5, tau=0.4)
+CFG_HET = Config(H=10, W=10, T=5, density=0.8, tau=0.4, sigma_tau=0.15)
 
 
 def test_init_world_occupancy_shape():
@@ -194,3 +195,39 @@ def test_simulate_vmap():
 
     batch = jax.jit(jax.vmap(run_one))(keys)
     assert batch.soft_occupancy.shape == (B, 10, 10, 3)
+
+
+def test_heterogeneous_tolerances_vary():
+    """With sigma_tau > 0, tolerances should not all be equal."""
+    key = jax.random.PRNGKey(0)
+    state = init_world_heterogeneous(key, CFG_HET)
+    tol = state.tolerances
+    assert float(jnp.std(tol)) > 0.01
+
+
+def test_heterogeneous_tolerances_clipped():
+    """Tolerances must stay in [0.001, 0.999]."""
+    key = jax.random.PRNGKey(0)
+    state = init_world_heterogeneous(key, CFG_HET)
+    assert jnp.all(state.tolerances >= 0.001)
+    assert jnp.all(state.tolerances <= 0.999)
+
+
+def test_heterogeneous_gradient_flows_sigma():
+    """Gradient of dissimilarity w.r.t. sigma_tau must be finite."""
+    from abm_geometry.schelling.simulate import simulate_with_beta
+    from abm_geometry.statistics.segregation import dissimilarity_index
+
+    cfg_g = Config(H=8, W=8, T=5, seed=5, tau=0.4)
+    key_g = jax.random.PRNGKey(0)
+    k_init_g, k_sim_g = jax.random.split(key_g)
+
+    def d_from_sigma(sigma):
+        eps = jax.random.normal(k_init_g, (cfg_g.H, cfg_g.W))
+        tol = jnp.clip(cfg_g.tau + sigma * eps, 0.001, 0.999)
+        base = init_world(k_init_g, cfg_g).replace(tolerances=tol)
+        final = simulate_with_beta(k_sim_g, base, cfg_g, jnp.array(cfg_g.beta))
+        return dissimilarity_index(final.soft_occupancy)
+
+    grad = jax.grad(d_from_sigma)(jnp.array(0.1))
+    assert jnp.isfinite(grad)
